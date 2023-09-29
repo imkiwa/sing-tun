@@ -75,7 +75,12 @@ func (n *TCPNat) Lookup(source netip.AddrPort, destination netip.AddrPort) uint1
 	if loaded {
 		return port
 	}
+
 	n.addrAccess.Lock()
+	defer n.addrAccess.Unlock()
+	n.portAccess.Lock()
+	defer n.portAccess.Unlock()
+
 	nextPort := n.portIndex
 	if nextPort == 0 {
 		nextPort = 10000
@@ -84,13 +89,12 @@ func (n *TCPNat) Lookup(source netip.AddrPort, destination netip.AddrPort) uint1
 		n.portIndex++
 	}
 	n.addrMap[source] = nextPort
-	n.addrAccess.Unlock()
-	n.portAccess.Lock()
+
 	n.portMap[nextPort] = &TCPSession{
 		Source:      source,
 		Destination: destination,
 		LastActive:  time.Now(),
 	}
-	n.portAccess.Unlock()
+
 	return nextPort
 }
